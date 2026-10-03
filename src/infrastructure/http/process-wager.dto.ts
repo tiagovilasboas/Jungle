@@ -1,5 +1,5 @@
 import { Type } from 'class-transformer';
-import { IsIn, IsNotEmpty, IsString, Matches, ValidateNested } from 'class-validator';
+import { IsIn, IsNotEmpty, IsString, IsUUID, Matches, ValidateNested } from 'class-validator';
 import type { WagerKind } from '../../application/use-cases/process-wager.use-case.js';
 
 export class MoneyDto {
@@ -25,8 +25,7 @@ export class ProcessWagerDto {
   @IsNotEmpty()
   public payloadHash!: string;
 
-  @IsString()
-  @IsNotEmpty()
+  @IsUUID('loose')
   public walletId!: string;
 
   @IsString()
