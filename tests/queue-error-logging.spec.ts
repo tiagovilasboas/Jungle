@@ -25,7 +25,7 @@ describe('queue loops log failures instead of swallowing them', () => {
     const consumer = new SqsInboxConsumer(client as never, 'queue-url', {} as never);
 
     consumer.start();
-    await vi.advanceTimersByTimeAsync(1000);
+    await vi.advanceTimersByTimeAsync(0);
     consumer.stop();
 
     expect(errorSpy).toHaveBeenCalledTimes(1);
