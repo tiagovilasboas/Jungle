@@ -2,8 +2,9 @@ import { readdir, readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { join } from 'node:path';
 import { Pool } from 'pg';
+import { databaseUrl } from '../../config.js';
 
-const pool = new Pool({ connectionString: process.env.DATABASE_URL ?? 'postgres://jungle:jungle@localhost:5432/jungle' });
+const pool = new Pool({ connectionString: databaseUrl() });
 const migrationsDirectory = new URL('./migrations/', import.meta.url);
 const migrationsPath = fileURLToPath(migrationsDirectory);
 
