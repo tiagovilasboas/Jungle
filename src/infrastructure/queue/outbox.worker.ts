@@ -1,8 +1,9 @@
-import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { PublishOutboxUseCase } from '../../application/use-cases/publish-outbox.use-case.js';
 
 @Injectable()
 export class OutboxWorker implements OnModuleInit, OnModuleDestroy {
+  private readonly logger = new Logger(OutboxWorker.name);
   private timer: NodeJS.Timeout | undefined;
 
   public constructor(
@@ -17,7 +18,7 @@ export class OutboxWorker implements OnModuleInit, OnModuleDestroy {
   public start(): void {
     if (this.timer) return;
     this.timer = setInterval(() => {
-      void this.runOnce().catch(() => undefined);
+      void this.runOnce().catch((error: unknown) => this.logger.error('Falha ao publicar outbox', error instanceof Error ? error.stack : String(error)));
     }, this.pollIntervalMs);
   }
 
