@@ -1,4 +1,5 @@
 import { Decimal } from 'decimal.js';
+import { CurrencyMismatchError, InvalidMoneyError } from '../errors.js';
 
 export interface MoneyProps {
   amount: string;
@@ -12,9 +13,9 @@ export class Money {
   ) {}
 
   public static from({ amount, currency }: MoneyProps): Money {
-    if (!currency?.trim()) throw new Error('Currency is required');
+    if (!currency?.trim()) throw new InvalidMoneyError('Currency is required');
     if (!/^-?\d+(\.\d{1,2})?$/.test(amount)) {
-      throw new Error(`Invalid decimal format for Money: ${amount}`);
+      throw new InvalidMoneyError(`Invalid decimal format for Money: ${amount}`);
     }
 
     return new Money(new Decimal(amount), currency.toUpperCase());
@@ -40,6 +41,6 @@ export class Money {
   public toJSON(): MoneyProps { return { amount: this.value.toFixed(2), currency: this.currency }; }
 
   private assertSameCurrency(other: Money): void {
-    if (this.currency !== other.currency) throw new Error(`Currency mismatch: ${this.currency} vs ${other.currency}`);
+    if (this.currency !== other.currency) throw new CurrencyMismatchError(`Currency mismatch: ${this.currency} vs ${other.currency}`);
   }
 }

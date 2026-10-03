@@ -1,6 +1,7 @@
 import { WalletUnitOfWork } from '../ports/wallet-unit-of-work.port.js';
 import { Money } from '../../domain/value-objects/money.vo.js';
 import { randomUUID } from 'node:crypto';
+import { IdempotencyPayloadMismatchError, WalletNotFoundError } from '../../domain/errors.js';
 
 export type WagerKind = 'BET' | 'WIN' | 'LOSS' | 'REFUND' | 'ROLLBACK';
 
@@ -29,7 +30,7 @@ export class ProcessWagerUseCase {
     return this.unitOfWork.transactional(async (context) => {
       const existing = await context.findTransactionByIdempotencyKey(input.idempotencyKey);
       if (existing) {
-        if (existing.payloadHash !== input.payloadHash) throw new Error('IDEMPOTENCY_PAYLOAD_MISMATCH');
+        if (existing.payloadHash !== input.payloadHash) throw new IdempotencyPayloadMismatchError();
         return {
           transactionId: existing.id,
           status: existing.status,
@@ -39,12 +40,12 @@ export class ProcessWagerUseCase {
       }
 
       const wallet = await context.findWalletForUpdate(input.walletId);
-      if (!wallet) throw new Error('WALLET_NOT_FOUND');
+      if (!wallet) throw new WalletNotFoundError();
 
       // The first lookup avoids unnecessary locking; this one closes the concurrent replay window.
       const transactionAfterLock = await context.findTransactionByIdempotencyKey(input.idempotencyKey);
       if (transactionAfterLock) {
-        if (transactionAfterLock.payloadHash !== input.payloadHash) throw new Error('IDEMPOTENCY_PAYLOAD_MISMATCH');
+        if (transactionAfterLock.payloadHash !== input.payloadHash) throw new IdempotencyPayloadMismatchError();
         return {
           transactionId: transactionAfterLock.id,
           status: transactionAfterLock.status,
