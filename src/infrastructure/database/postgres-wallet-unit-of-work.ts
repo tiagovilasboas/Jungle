@@ -1,11 +1,19 @@
 import { Pool, type PoolClient } from 'pg';
 import { Wallet } from '../../domain/entities/wallet.entity.js';
+import { DuplicateExternalTransactionError } from '../../domain/errors.js';
 import { Money } from '../../domain/value-objects/money.vo.js';
 import type {
   StoredTransaction,
   WalletTransactionContext,
   WalletUnitOfWork,
 } from '../../application/ports/wallet-unit-of-work.port.js';
+
+const EXTERNAL_TRANSACTION_ID_CONSTRAINT = 'wager_transactions_external_transaction_id_key';
+
+function isUniqueViolationOn(error: unknown, constraint: string): boolean {
+  const pgError = error as { code?: string; constraint?: string };
+  return pgError.code === '23505' && pgError.constraint === constraint;
+}
 
 export class PostgresWalletUnitOfWork implements WalletUnitOfWork {
   public constructor(private readonly pool: Pool) {}
@@ -81,12 +89,17 @@ class PostgresWalletTransactionContext implements WalletTransactionContext {
   }
 
   public async saveTransaction(transaction: StoredTransaction): Promise<void> {
-    await this.client.query(
-      `INSERT INTO wager_transactions
-       (id, external_transaction_id, idempotency_key, payload_hash, wallet_id, status, balance_amount, balance_currency)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-      [transaction.id, transaction.externalTransactionId, transaction.idempotencyKey, transaction.payloadHash, this.walletId, transaction.status, transaction.balance.amount, transaction.balance.currency],
-    );
+    try {
+      await this.client.query(
+        `INSERT INTO wager_transactions
+         (id, external_transaction_id, idempotency_key, payload_hash, wallet_id, status, balance_amount, balance_currency)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+        [transaction.id, transaction.externalTransactionId, transaction.idempotencyKey, transaction.payloadHash, this.walletId, transaction.status, transaction.balance.amount, transaction.balance.currency],
+      );
+    } catch (error) {
+      if (isUniqueViolationOn(error, EXTERNAL_TRANSACTION_ID_CONSTRAINT)) throw new DuplicateExternalTransactionError();
+      throw error;
+    }
   }
 
   public async appendLedgerEntry(entry: { transactionId: string; walletId: string; amount: string; currency: string; kind: string }): Promise<void> {

@@ -6,6 +6,7 @@ import { ProcessWagerController } from '../src/infrastructure/http/process-wager
 import { ProcessWagerUseCase } from '../src/application/use-cases/process-wager.use-case.js';
 import {
   CurrencyMismatchError,
+  DuplicateExternalTransactionError,
   IdempotencyPayloadMismatchError,
   InsufficientFundsError,
   InvalidMoneyError,
@@ -44,6 +45,7 @@ describe('domain errors become HTTP statuses', () => {
 
   const cases: Array<[string, Error, number]> = [
     ['IDEMPOTENCY_PAYLOAD_MISMATCH', new IdempotencyPayloadMismatchError(), 409],
+    ['DUPLICATE_EXTERNAL_TRANSACTION', new DuplicateExternalTransactionError(), 409],
     ['WALLET_NOT_FOUND', new WalletNotFoundError(), 404],
     ['INSUFFICIENT_FUNDS', new InsufficientFundsError(), 422],
     ['CurrencyMismatchError', new CurrencyMismatchError('Currency mismatch: BRL vs USD'), 422],

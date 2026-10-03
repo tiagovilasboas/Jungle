@@ -17,6 +17,10 @@ export class IdempotencyPayloadMismatchError extends DomainError {
   public constructor() { super('IDEMPOTENCY_PAYLOAD_MISMATCH'); }
 }
 
+export class DuplicateExternalTransactionError extends DomainError {
+  public constructor() { super('DUPLICATE_EXTERNAL_TRANSACTION'); }
+}
+
 export class CurrencyMismatchError extends DomainError {
   public constructor(message: string) { super('CURRENCY_MISMATCH', message); }
 }

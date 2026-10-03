@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { Pool } from 'pg';
 import { ProcessWagerUseCase } from '../../src/application/use-cases/process-wager.use-case.js';
+import { DuplicateExternalTransactionError } from '../../src/domain/errors.js';
 import { PostgresWalletUnitOfWork } from '../../src/infrastructure/database/postgres-wallet-unit-of-work.js';
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL ?? 'postgres://jungle:jungle@localhost:5432/jungle' });
@@ -78,4 +79,32 @@ describe('financial concurrency', () => {
     expect(transactions.rows[0]?.count).toBe('51');
     expect(balance.rows[0]?.balance).toBe('49.00');
   }, 15_000);
+});
+describe('duplicate externalTransactionId', () => {
+  const duplicateWalletId = randomUUID();
+
+  beforeAll(async () => {
+    const setupPool = new Pool({ connectionString: process.env.DATABASE_URL ?? 'postgres://jungle:jungle@localhost:5432/jungle' });
+    await setupPool.query(`INSERT INTO wallets (id, player_id, currency, balance) VALUES ($1, $2, 'BRL', 100.00)`, [duplicateWalletId, randomUUID()]);
+    await setupPool.end();
+  });
+
+  it('rejects the second wager with DuplicateExternalTransactionError and keeps the balance', async () => {
+    const verifyPool = new Pool({ connectionString: process.env.DATABASE_URL ?? 'postgres://jungle:jungle@localhost:5432/jungle' });
+    const useCase = new ProcessWagerUseCase(new PostgresWalletUnitOfWork(verifyPool));
+    const externalTransactionId = randomUUID();
+    const base = { externalTransactionId, payloadHash: 'h', walletId: duplicateWalletId, roundId: 'r', gameId: 'g', kind: 'BET' as const, money: { amount: '10.00', currency: 'BRL' } };
+
+    await useCase.execute({ ...base, idempotencyKey: `dup-a-${externalTransactionId}` });
+    await expect(useCase.execute({ ...base, idempotencyKey: `dup-b-${externalTransactionId}` })).rejects.toBeInstanceOf(DuplicateExternalTransactionError);
+
+    const { rows } = await verifyPool.query('SELECT balance FROM wallets WHERE id = $1', [duplicateWalletId]);
+    expect(rows[0].balance).toBe('90.00');
+
+    await verifyPool.query('DELETE FROM outbox_messages WHERE wallet_id = $1', [duplicateWalletId]);
+    await verifyPool.query('DELETE FROM wallet_ledger_entries WHERE wallet_id = $1', [duplicateWalletId]);
+    await verifyPool.query('DELETE FROM wager_transactions WHERE wallet_id = $1', [duplicateWalletId]);
+    await verifyPool.query('DELETE FROM wallets WHERE id = $1', [duplicateWalletId]);
+    await verifyPool.end();
+  });
 });
