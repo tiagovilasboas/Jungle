@@ -15,6 +15,7 @@ import { PostgresInboxRepository } from './infrastructure/database/postgres-inbo
 import { ConsumeInboxUseCase } from './application/use-cases/consume-inbox.use-case.js';
 import { NoopEventHandler } from './infrastructure/queue/noop-event.handler.js';
 import { SqsInboxConsumer } from './infrastructure/queue/sqs-inbox.consumer.js';
+import { databaseUrl, sqsQueueUrl } from './config.js';
 
 @Module({
   controllers: [ProcessWagerController, HealthController],
@@ -27,7 +28,7 @@ import { SqsInboxConsumer } from './infrastructure/queue/sqs-inbox.consumer.js';
     },
     {
       provide: Pool,
-      useFactory: () => new Pool({ connectionString: process.env.DATABASE_URL ?? 'postgres://jungle:jungle@localhost:5432/jungle' }),
+      useFactory: () => new Pool({ connectionString: databaseUrl() }),
     },
     {
       provide: PostgresWalletUnitOfWork,
@@ -37,7 +38,7 @@ import { SqsInboxConsumer } from './infrastructure/queue/sqs-inbox.consumer.js';
     {
       provide: SQSClient,
       useFactory: () => {
-        const queueUrl = process.env.SQS_QUEUE_URL ?? 'http://localhost:4566/000000000000/wager-events';
+        const queueUrl = sqsQueueUrl();
         const endpoint = process.env.SQS_ENDPOINT ?? (queueUrl.startsWith('http://localhost:4566') ? 'http://localhost:4566' : undefined);
         return new SQSClient(endpoint
           ? { region: process.env.AWS_REGION ?? 'us-east-1', endpoint, credentials: { accessKeyId: 'test', secretAccessKey: 'test' } }
@@ -49,7 +50,7 @@ import { SqsInboxConsumer } from './infrastructure/queue/sqs-inbox.consumer.js';
       inject: [SQSClient],
       useFactory: (client: SQSClient) => new SqsEventPublisher(
         client,
-        process.env.SQS_QUEUE_URL ?? 'http://localhost:4566/000000000000/wager-events',
+        sqsQueueUrl(),
       ),
     },
     {
@@ -83,7 +84,7 @@ import { SqsInboxConsumer } from './infrastructure/queue/sqs-inbox.consumer.js';
       inject: [SQSClient, ConsumeInboxUseCase],
       useFactory: (client: SQSClient, consumeInbox: ConsumeInboxUseCase) => new SqsInboxConsumer(
         client,
-        process.env.SQS_QUEUE_URL ?? 'http://localhost:4566/000000000000/wager-events',
+        sqsQueueUrl(),
         consumeInbox,
       ),
     },
