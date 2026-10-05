@@ -1,3 +1,4 @@
+import { CurrencyMismatchError, InsufficientFundsError, InvalidMoneyError } from '../errors.js';
 import { Money } from '../value-objects/money.vo.js';
 
 export interface WalletState {
@@ -36,7 +37,7 @@ export class Wallet {
 
   public debit(amount: Money): void {
     this.assertValidAmount(amount);
-    if (this.currentBalance.isLessThan(amount)) throw new Error('INSUFFICIENT_FUNDS');
+    if (this.currentBalance.isLessThan(amount)) throw new InsufficientFundsError();
     this.currentBalance = this.currentBalance.subtract(amount);
     this.bumpVersion();
   }
@@ -48,8 +49,8 @@ export class Wallet {
   }
 
   private assertValidAmount(amount: Money): void {
-    if (amount.currency !== this.currency) throw new Error(`Wallet currency mismatch: ${this.currency} vs ${amount.currency}`);
-    if (!amount.isPositive()) throw new Error('Operation amount must be positive');
+    if (amount.currency !== this.currency) throw new CurrencyMismatchError(`Wallet currency mismatch: ${this.currency} vs ${amount.currency}`);
+    if (!amount.isPositive()) throw new InvalidMoneyError('Operation amount must be positive');
   }
 
   private bumpVersion(): void {
