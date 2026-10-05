@@ -3,6 +3,7 @@ import type { Response } from 'express';
 import {
   CurrencyMismatchError,
   DomainError,
+  DuplicateExternalTransactionError,
   IdempotencyPayloadMismatchError,
   InsufficientFundsError,
   InvalidMoneyError,
@@ -17,7 +18,7 @@ export class DomainExceptionFilter implements ExceptionFilter {
   }
 
   private toHttpException(error: DomainError): HttpException {
-    if (error instanceof IdempotencyPayloadMismatchError) return new ConflictException(error.code);
+    if (error instanceof IdempotencyPayloadMismatchError || error instanceof DuplicateExternalTransactionError) return new ConflictException(error.code);
     if (error instanceof WalletNotFoundError) return new NotFoundException(error.code);
     if (error instanceof InsufficientFundsError) return new UnprocessableEntityException(error.code);
     if (error instanceof CurrencyMismatchError || error instanceof InvalidMoneyError) return new UnprocessableEntityException(error.message);
