@@ -1,5 +1,5 @@
 import { DeleteMessageCommand, ReceiveMessageCommand, SQSClient } from '@aws-sdk/client-sqs';
-import { OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import { Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import type { ConsumeInboxUseCase } from '../../application/use-cases/consume-inbox.use-case.js';
 import type { InboxEvent } from '../../application/ports/inbox.port.js';
 
@@ -10,6 +10,7 @@ interface SqsMessage {
 }
 
 export class SqsInboxConsumer implements OnModuleInit, OnModuleDestroy {
+  private readonly logger = new Logger(SqsInboxConsumer.name);
   private timer: NodeJS.Timeout | undefined;
 
   public constructor(
@@ -45,7 +46,7 @@ export class SqsInboxConsumer implements OnModuleInit, OnModuleDestroy {
 
   public start(): void {
     if (this.timer) return;
-    this.timer = setInterval(() => { void this.pollOnce().catch(() => undefined); }, 1000);
+    this.timer = setInterval(() => { void this.pollOnce().catch((error: unknown) => this.logger.error('Falha ao consumir inbox', error instanceof Error ? error.stack : String(error))); }, 1000);
   }
 
   public onModuleInit(): void { this.start(); }
