@@ -59,7 +59,7 @@ chmod +x docker/localstack/init/ready.d/01-create-queues.sh
 
 O LocalStack cria a fila `wager-events`. A aplicação usa automaticamente o endpoint local e `SQS_QUEUE_URL=http://localhost:4566/000000000000/wager-events` por padrão. Em AWS, defina `SQS_QUEUE_URL` e `AWS_REGION` com os valores do ambiente.
 
-O schema em `src/infrastructure/database/schema.sql` é aplicado automaticamente na primeira criação do volume. Para ambientes persistentes, use as migrations versionadas com `npm run db:migrate`; o runner faz baseline automático quando encontra o schema já criado pelo Docker. A conexão padrão é `postgres://jungle:jungle@localhost:5432/jungle`.
+As migrations em `src/infrastructure/database/migrations` são aplicadas automaticamente na primeira criação do volume (única fonte do schema). Para ambientes persistentes, use as migrations versionadas com `npm run db:migrate`; o runner faz baseline automático quando encontra o schema já criado pelo Docker. A conexão padrão é `postgres://jungle:jungle@localhost:5432/jungle`.
 
 ## API
 
@@ -105,7 +105,7 @@ Health checks: `GET /healthz` confirma que o processo está vivo; `GET /readyz` 
 
 - `src/domain`: regras puras de dinheiro e carteira.
 - `src/application`: casos de uso e portas de saída.
-- `src/infrastructure/database`: schema PostgreSQL, unit of work e repositório Outbox.
+- `src/infrastructure/database`: migrations PostgreSQL, unit of work e repositórios Outbox/Inbox.
 - `src/infrastructure/queue`: worker de polling da Outbox.
 - `tests`: comportamento do domínio e do processamento de apostas.
 
