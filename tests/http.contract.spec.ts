@@ -9,7 +9,7 @@ const validBody = {
   externalTransactionId: 'external-1',
   idempotencyKey: 'idem-1',
   payloadHash: 'hash-1',
-  walletId: 'wallet-1',
+  walletId: '00000000-0000-0000-0000-000000000001',
   roundId: 'round-1',
   gameId: 'game-1',
   kind: 'BET',
@@ -44,6 +44,11 @@ describe('wager HTTP contract', () => {
     const response = await request(application.getHttpServer()).post('/wagers').send(validBody);
     expect(response.status).toBe(201);
     expect(response.body.transactionId).toBe('transaction-1');
+  });
+
+  it('rejects walletId that is not a UUID', async () => {
+    const response = await request(application.getHttpServer()).post('/wagers').send({ ...validBody, walletId: 'wallet-1' });
+    expect(response.status).toBe(400);
   });
 
   it('rejects malformed money', async () => {
