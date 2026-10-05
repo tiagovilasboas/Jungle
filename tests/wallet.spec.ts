@@ -25,4 +25,11 @@ describe('Wallet', () => {
     const wallet = Wallet.open({ id: 'wallet-1', playerId: 'player-1', initialBalance: Money.from({ amount: '10.00', currency: 'BRL' }) });
     expect(() => wallet.debit(Money.from({ amount: '10.01', currency: 'BRL' }))).toThrow('INSUFFICIENT_FUNDS');
   });
+
+  it.each(['0.00', '-1.00'])('rejects a debit or credit of %s (amount must be positive)', (amount) => {
+    const wallet = Wallet.open({ id: 'wallet-1', playerId: 'player-1', initialBalance: Money.from({ amount: '10.00', currency: 'BRL' }) });
+    expect(() => wallet.debit(Money.from({ amount, currency: 'BRL' }))).toThrow('must be positive');
+    expect(() => wallet.credit(Money.from({ amount, currency: 'BRL' }))).toThrow('must be positive');
+    expect(wallet.balance.toJSON().amount).toBe('10.00');
+  });
 });
